@@ -1,17 +1,44 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Ẩn một phần tên
+-- ================= SAVE SYSTEM =================
+
+local SAVE_FILE = "NameHub_Save.json"
+
+local savedData = {
+	Text = "",
+	Toggle = false
+}
+
+if isfile and isfile(SAVE_FILE) then
+	local success, data = pcall(function()
+		return HttpService:JSONDecode(readfile(SAVE_FILE))
+	end)
+	if success and data then
+		savedData = data
+	end
+end
+
+local function saveDataToFile()
+	if writefile then
+		writefile(SAVE_FILE, HttpService:JSONEncode(savedData))
+	end
+end
+
+-- ================= HIDE NAME =================
+
 local function hideName(name)
 	local visibleLength = math.max(3, math.floor(#name * 0.5))
 	local hiddenPart = string.rep("*", #name - visibleLength)
 	return string.sub(name, 1, visibleLength) .. hiddenPart
 end
 
--- GUI chính
+-- ================= GUI =================
+
 local nameHub = Instance.new("ScreenGui")
 nameHub.Name = "NameHub"
 nameHub.ResetOnSpawn = false
@@ -30,7 +57,8 @@ mainFrame.Draggable = true
 
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0.15, 0)
 
--- TAB FRAME
+-- ================= TAB =================
+
 local tabFrame = Instance.new("Frame", mainFrame)
 tabFrame.Size = UDim2.new(1, 0, 0.25, 0)
 tabFrame.BackgroundTransparency = 1
@@ -51,18 +79,22 @@ local noteTab = createTab("📌 Note", 0)
 local statusTab = createTab("📊 Status", 0.33)
 local settingTab = createTab("⚙ Setting", 0.66)
 
--- PAGES
-local notePage = Instance.new("Frame", mainFrame)
-notePage.Size = UDim2.new(1, 0, 0.75, 0)
-notePage.Position = UDim2.new(0, 0, 0.25, 0)
-notePage.BackgroundTransparency = 1
+-- ================= PAGES =================
 
-local statusPage = notePage:Clone()
-statusPage.Parent = mainFrame
+local function createPage()
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1, 0, 0.75, 0)
+	frame.Position = UDim2.new(0, 0, 0.25, 0)
+	frame.BackgroundTransparency = 1
+	frame.Parent = mainFrame
+	return frame
+end
+
+local notePage = createPage()
+local statusPage = createPage()
+local settingPage = createPage()
+
 statusPage.Visible = false
-
-local settingPage = notePage:Clone()
-settingPage.Parent = mainFrame
 settingPage.Visible = false
 
 -- ================= NOTE PAGE =================
@@ -84,6 +116,7 @@ jobBox.TextScaled = true
 jobBox.Font = Enum.Font.GothamBold
 jobBox.ClearTextOnFocus = false
 jobBox.TextWrapped = true
+jobBox.Text = savedData.Text
 
 -- ================= STATUS PAGE =================
 
@@ -104,7 +137,6 @@ updatePlayerCount()
 
 -- ================= SETTING PAGE =================
 
--- SAVE TOGGLE
 local saveLabel = Instance.new("TextLabel", settingPage)
 saveLabel.Size = UDim2.new(0.6,0,0.5,0)
 saveLabel.BackgroundTransparency = 1
@@ -125,23 +157,41 @@ circle.Position = UDim2.new(0,2,0.5,-12)
 circle.BackgroundColor3 = Color3.fromRGB(255,140,0)
 Instance.new("UICorner", circle).CornerRadius = UDim.new(1,0)
 
-local saved = false
+local saved = savedData.Toggle
+
+if saved then
+	circle.Position = UDim2.new(1,-26,0.5,-12)
+	jobBox.TextEditable = false
+end
 
 toggle.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		saved = not saved
+		savedData.Toggle = saved
+		saveDataToFile()
 		
 		if saved then
 			circle:TweenPosition(UDim2.new(1,-26,0.5,-12),"Out","Quad",0.2,true)
 			jobBox.TextEditable = false
+			savedData.Text = jobBox.Text
 		else
 			circle:TweenPosition(UDim2.new(0,2,0.5,-12),"Out","Quad",0.2,true)
 			jobBox.TextEditable = true
 		end
+		
+		saveDataToFile()
 	end
 end)
 
--- FPS
+jobBox:GetPropertyChangedSignal("Text"):Connect(function()
+	if saved then
+		savedData.Text = jobBox.Text
+		saveDataToFile()
+	end
+end)
+
+-- ================= FPS =================
+
 local fpsLabel = Instance.new("TextLabel", settingPage)
 fpsLabel.Size = UDim2.new(1,0,0.5,0)
 fpsLabel.Position = UDim2.new(0,0,0.5,0)
@@ -149,7 +199,7 @@ fpsLabel.BackgroundTransparency = 1
 fpsLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
 fpsLabel.TextScaled = true
 fpsLabel.Font = Enum.Font.GothamBold
-fpsLabel.Text = ""
+fpsLabel.Text = "Click to toggle FPS"
 
 local fpsEnabled = false
 local lastTime = tick()
@@ -160,8 +210,6 @@ RunService.RenderStepped:Connect(function()
 	if tick() - lastTime >= 1 then
 		if fpsEnabled then
 			fpsLabel.Text = "🎮 FPS: " .. frames
-		else
-			fpsLabel.Text = ""
 		end
 		frames = 0
 		lastTime = tick()
@@ -171,10 +219,14 @@ end)
 fpsLabel.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		fpsEnabled = not fpsEnabled
+		if not fpsEnabled then
+			fpsLabel.Text = "Click to toggle FPS"
+		end
 	end
 end)
 
--- TAB SWITCH
+-- ================= TAB SWITCH =================
+
 noteTab.MouseButton1Click:Connect(function()
 	notePage.Visible = true
 	statusPage.Visible = false
