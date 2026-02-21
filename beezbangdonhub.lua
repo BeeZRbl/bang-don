@@ -47,11 +47,11 @@ nameHub.Parent = playerGui
 local mainFrame = Instance.new("Frame")
 mainFrame.Parent = nameHub
 mainFrame.Size = UDim2.new(0.25, 0, 0.14, 0) 
-mainFrame.Position = UDim2.new(0.5, 0, 0.12, 0) 
+mainFrame.Position = UDim2.new(0.375, 0, 0.05, 0) 
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.15
 mainFrame.BorderSizePixel = 0
-mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.AnchorPoint = Vector2.new(0, 0) 
 mainFrame.Active = true
 mainFrame.Draggable = true
 
